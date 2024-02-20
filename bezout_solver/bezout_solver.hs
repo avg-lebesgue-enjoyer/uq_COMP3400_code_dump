@@ -7,13 +7,15 @@ solve it by hand
 -}
 
 module Main where
-import Data.Char (toUpper)
-import Control.Monad (when, forever)
-import System.IO (openFile, IOMode (..), hGetContents, hClose, withFile)
+--import Data.Char (toUpper)
+--import Control.Monad (when, forever)
+--import System.IO (openFile, IOMode (..), hGetContents, hClose, withFile)
+import System.IO (stdout)
+import GHC.IO.Handle (hFlush)
 
 {- LAUNCH -}
 main :: IO ()
-main = putStrLn "placeholder"
+main = nice
 
 
 
@@ -30,6 +32,7 @@ request :: String -> IO String
 request prompt = do
     speak prompt
     putStr inCursor
+    hFlush stdout
     getLine
 
 -- Helper: Receive a, b, c
@@ -39,18 +42,81 @@ getEquation = do
     a' <- request "a = ..."
     b' <- request "b = ..."
     c' <- request "c = ..."
-    let a = read a' :: Int
-        b = read b' :: Int
-        c = read c' :: Int
-    speak $ "Your equation `is " ++ show a ++ "x + " ++ show b ++ "y = " ++ show c
+    let a = abs (read a' :: Int)
+        b = abs (read b' :: Int)
+        c = abs (read c' :: Int)
+    speak $ "Your equation is " ++ show a ++ "x + " ++ show b ++ "y = " ++ show c
     return (a, b, c)
 
 -- Nicely formatted
+-- BUG: If numbers get 
 nice :: IO ()
 nice = do
     -- Initialisation
     (a, b, c) <- getEquation
-    putStrLn "placeholda"
+    -- Edge case: one of the coefficients is the gcd (super duper easy)
+    let theGcd = gcd a b
+    if a == theGcd || b == theGcd then do
+            niceTrivialSolution (a, b, c, theGcd)
+    else do
+        -- Euclidean algorithm trace
+        let trace = euclidTrace a b
+            gcdSol =        gcdSolution trace
+            problemSol =    solution gcdSol c
+            hasSolution =   problemSol /= MaybeSolution Nothing
+            solutionNot =   if hasSolution then "" else "not "
+        if not hasSolution then do
+            niceNoSolution trace
+        else do
+            niceNonTrivialSolution trace (a, b, c, theGcd)
+    return ()
+
+-- No solution in nice formatting
+niceNoSolution :: [EuclidStep] -> IO ()
+niceNoSolution trace = do
+    speak $ "The Euclidean algorithm progresses like follows: \n" ++ show trace
+    speak   "The equation does not have a solution!"
+    return ()
+
+-- Trivial solution in nice formatting
+niceTrivialSolution :: (Int, Int, Int, Int) -> IO ()
+niceTrivialSolution (a, b, c, theGcd) = do
+    let coefficientWhichIsGcd = 
+            if theGcd == a  then "a = " ++ show a 
+                            else "b = " ++ show b
+        gcdSol = 
+            if theGcd == a  then FinalEquation (theGcd, a, 1, b, 0) -- "gcd = a * 1 + b * 0"
+                            else FinalEquation (theGcd, a, 0, b, 1)
+        sol = solution gcdSol c
+    speak $ show theGcd ++ " is the coefficient " ++ coefficientWhichIsGcd ++ ", so..."
+    speak $ "For the equation " ++ show a ++ "x + " ++ show b ++ "y = " ++ show theGcd ++ " we have:\n" ++ show gcdSol
+    speak $ "For the equation you actually asked about, we have:\n" ++ show sol
+    return ()
+
+-- Nontrivial solution in nice formatting
+-- niceNonTrivialSolution trace (a, b, c, theGcd)
+niceNonTrivialSolution :: [EuclidStep] -> (Int, Int, Int, Int) -> IO ()
+niceNonTrivialSolution trace (a, b, c, theGcd) = do
+    let extraInfo = getInformationEquations trace
+        working =   workThrough trace
+        gcdSol =    gcdSolution trace
+        sol =       solution gcdSol c
+    let traceStrings =      map show trace
+        extraStrings =      "" : "" : map show extraInfo
+        workingStrings =    "" : map show working
+        presentation =      ("\tEuclidean algo\t\t\t\t\tUseful equation\t\t\t\t\t\tExtended algo" :) $ 
+            reverse $ zipWith3
+                (\traceString extraString workingString ->
+                    let extraString' =      if extraString == "" then "\t(irrelevant)" ++ replicate 4 '\t' else extraString
+                        workingString' =    if workingString == "" then "\t(irrelevant)" else workingString
+                    in  traceString ++ "\t<=>" ++ extraString'  ++ "\t=>" ++ workingString'
+                ) 
+                traceStrings extraStrings workingStrings
+    speak "The extended Euclidean algorithm progresses like follows: \n"
+    mapM_ putStrLn presentation
+    speak $ "For the equation " ++ show a ++ "x + " ++ show b ++ "y = " ++ show theGcd ++ " we have:\n" ++ show gcdSol
+    speak $ "For the equation you actually asked about, we have:\n" ++ show sol
+    return ()
 
 -- Not so nicely formatted working
 notNice :: IO ()
@@ -59,7 +125,7 @@ notNice = do
     (a, b, c) <- getEquation
     -- Euclidean algorithm trace
     let trace = euclidTrace a b
-    speak $ "The Euclidean algorithm progresses like follows: \n" ++ show trace
+    speak $ "The Euclidean algorithm progresses like follows: \n" ++ showListLn trace
     let theGcd =        gcd a b
         gcdSol =        gcdSolution trace
         problemSol =    solution gcdSol c
@@ -77,11 +143,12 @@ notNice = do
             sol =           solution gcdSol c
         -- Extended Euclidean algorithm
         speak $ "The base equation is:\n" ++ show baseEquation
-        speak $ "The extra information we can use is as follows: \n" ++ show extraInfo
-        speak $ "Our working is: \n" ++ show working
+        speak $ "The extra information we can use is as follows: \n" ++ showListLn extraInfo
+        speak $ "Our working is: \n" ++ showListLn working
         speak $ "For the equation " ++ show a ++ "x + " ++ show b ++ "y = " ++ show theGcd ++ " we have:\n" ++ show gcdSol
         speak $ "For the equation you actually asked about, we have:\n" ++ show sol
-        
+        return ()
+
 
 
 
@@ -94,7 +161,15 @@ newtype EuclidStep = EuclidStep (Big, CoefficientQuotient, Small, Remainder)
 
 instance Show EuclidStep where
     show :: EuclidStep -> String
-    show (EuclidStep (b, c, s, r)) = "\t" ++ show b ++ "\t= " ++ show c ++ "\t* " ++ show s ++ "\t\t+ " ++ show r ++ "\n"
+    show (EuclidStep (b, c, s, r)) = "\t" ++ show b ++ "\t= " ++ show c ++ "\t* " ++ show s ++ "\t\t+ " ++ show r-- ++ "\n"
+
+-- show with new line
+showLn :: Show a => a -> String
+showLn = (++ "\n") . show
+
+-- show list with new lines
+showListLn :: Show a => [a] -> String
+showListLn = foldl1 (++) . map showLn
 
 -- euclidStep big small returns (big, coefficient, small, remainder) such that
 -- big = coefficient * small + remainder
@@ -134,14 +209,14 @@ humanReadableEuclidTrace big = reverse . euclidTrace big
 newtype EvolvingEquation = EvolvingEquation (Int, Int, Int, Int, Int)
 instance Show EvolvingEquation where
     show :: EvolvingEquation -> String
-    show (EvolvingEquation (g, p, y, a, z)) = "\t" ++ show g ++ "\t= " ++ show p ++ "\t* " ++ show y ++ "\t-\t" ++ show a ++ "\t* " ++ show z ++ "\n"
+    show (EvolvingEquation (g, p, y, a, z)) = "\t" ++ show g ++ "\t= " ++ show p ++ "\t* " ++ show y ++ "\t-\t" ++ show a ++ "\t* " ++ show z-- ++ "\n"
 
 -- InformationEquation (z, x, b, y) represents the equation
 -- "z = x - b * y"
 newtype InformationEquation = InformationEquation (Int, Int, Int, Int)
 instance Show InformationEquation where
     show :: InformationEquation -> String
-    show (InformationEquation (z, x, b, y)) = "\t" ++ show z ++ "\t= " ++ show x ++ "\t\t-\t" ++ show b ++ "\t* " ++ show y ++ "\n"
+    show (InformationEquation (z, x, b, y)) = "\t" ++ show z ++ "\t= " ++ show x ++ "\t\t-\t" ++ show b ++ "\t* " ++ show y-- ++ "\n"
 
 -- FinalEquation (g, p, y, b, z) represents the equation
 -- "g = p * y + b * z"
@@ -168,6 +243,8 @@ evolve (EvolvingEquation (g, p, y, a, z)) (InformationEquation (z', x, b, y'))
 
 -- Grab base EvolvingEquation from a Euclid trace
 -- yeah, this is just the second element
+-- BUG: we get exactly 1 step for equation ax + by = c where gcd(a,b) is a or is b.
+--      (this corresponds to a trivial equation, but it is an edge case...)
 getBaseEvolvingEquation :: [EuclidStep] -> EvolvingEquation
 getBaseEvolvingEquation [] =    error "0 is too few steps!"
 getBaseEvolvingEquation [_] =   error "1 is too few steps!"
