@@ -69,6 +69,7 @@ nice = do
             niceNoSolution trace
         else do
             niceNonTrivialSolution trace (a, b, c, theGcd)
+    request "Press any key to exit..."
     return ()
 
 -- No solution in nice formatting
