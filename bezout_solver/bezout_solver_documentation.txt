@@ -1,0 +1,6 @@
+I didn't make this bulletproof! Don't try to break it!!
+
+Provide INTEGERS a, b, c. Providing anything else *will* cause a crash!
+If you find a bug in the algorithm itself (i.e. a case where the expected behaviour doesn't
+match a mathematically correct answer), pls let me know via github:
+	https://github.com/avg-lebesgue-enjoyer/uq_COMP3400_code_dump
