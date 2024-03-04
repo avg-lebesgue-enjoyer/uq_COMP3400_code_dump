@@ -1,6 +1,47 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use even" #-}
 module ModularType where
 import Data.Maybe (isNothing)
 import Data.Char (ord)
+
+
+
+{- SECTION: Mod26 -}
+
+newtype Mod2 = Mod2 Int
+
+m2 :: Int -> Mod2
+m2 = Mod2
+
+instance Eq Mod2 where
+    (==) :: Mod2 -> Mod2 -> Bool
+    (==) (Mod2 x) (Mod2 y) = x == y
+
+instance Show Mod2 where
+    show :: Mod2 -> String
+    show (Mod2 x) = show $ x `mod` 2
+
+instance Num Mod2 where
+    (+) :: Mod2 -> Mod2 -> Mod2
+    (+) (Mod2 x) (Mod2 y) = Mod2 $ (x + y) `mod` 2
+    (*) :: Mod2 -> Mod2 -> Mod2
+    (*) (Mod2 x) (Mod2 y) = Mod2 $ (x * y) `mod` 2
+    abs :: Mod2 -> Mod2
+    abs (Mod2 x) = Mod2 x
+    signum :: Mod2 -> Mod2
+    signum _ = Mod2 1
+    fromInteger :: Integer -> Mod2
+    fromInteger = Mod2 . fromInteger
+    negate :: Mod2 -> Mod2
+    negate (Mod2 x) = Mod2 $ negate x `mod` 26
+
+instance Fractional Mod2 where
+    fromRational :: Rational -> Mod2
+    fromRational _ = Mod2 1
+    recip :: Mod2 -> Mod2
+    recip (Mod2 x)
+        | x `mod` 2 == 0 =  error $ show x ++ " is not invertible mod 2 :("
+        | x `mod` 2 == 1 =  Mod2 1
 
 
 
