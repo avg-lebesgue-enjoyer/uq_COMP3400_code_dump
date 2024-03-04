@@ -10,8 +10,8 @@ import Data.Char (ord)
 
 newtype Mod2 = Mod2 Int
 
-m2 :: Int -> Mod2
-m2 = Mod2
+w :: Int -> Mod2
+w = Mod2
 
 instance Eq Mod2 where
     (==) :: Mod2 -> Mod2 -> Bool
