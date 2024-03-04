@@ -3,6 +3,41 @@
 module ModularType where
 import Data.Maybe (isNothing)
 import Data.Char (ord)
+import Data.List (transpose)
+
+
+
+{- SECTION: Matrices -}
+
+newtype Matrix a = Matrix [[a]] deriving Eq
+
+instance Show a => Show (Matrix a) where
+    show :: Show a => Matrix a -> String
+    show (Matrix xss) = concatMap ((++ "\n") . concatMap ((++ "\t") . show)) xss
+
+instance Num a => Num (Matrix a) where
+    (+) :: Num a => Matrix a -> Matrix a -> Matrix a
+    (+) (Matrix xss) (Matrix yss) = Matrix $ zipWith (zipWith (+)) xss yss
+    (*) :: Num a => Matrix a -> Matrix a -> Matrix a
+    (*) (Matrix xss) (Matrix yss) =
+        let yss' = transpose yss
+        in  Matrix $
+            [   [   sum (zipWith (*) xs ys)
+                    |   ys <- yss'
+                ]
+                |   xs <- xss
+            ]
+    -- abs is elementwise, and pointless
+    abs :: Num a => Matrix a -> Matrix a
+    abs (Matrix xss) = Matrix $ map (map abs) xss
+    -- signum is elementwise, and pointless
+    signum :: Num a => Matrix a -> Matrix a
+    signum (Matrix xss) = Matrix $ map (map signum) xss
+    -- fromInteger is the inclusion into 1x1 matrices
+    fromInteger :: Num a => Integer -> Matrix a
+    fromInteger x = Matrix [[fromInteger x]]
+    negate :: Num a => Matrix a -> Matrix a
+    negate (Matrix xss) = Matrix $ map (map negate) xss
 
 
 
