@@ -62,6 +62,6 @@ syntacticSugar (Just x)
 
 -- Comments are syntactic sugar for whitespace
 
--- Haskell is syntactic sugar for the compiled C code
+-- Haskell is syntactic sugar for the compiled C code (using GHC compiling to C)
 -- The compiled C code is syntactic sugar for the assembled Assembly code
 -- The assembled Assembly code is syntactic sugar for machine code
