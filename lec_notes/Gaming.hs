@@ -48,7 +48,7 @@ syntacticSugar (Just 0) =
         -- >> \ u v -> ... << desugars to >> \ u -> \ v -> ... <<
         -- List comprehension desugars to an expression involving concatMap, singletons 
         let (x', y') = (x, y)
-        -- let inside do desugars to let outside do
+        -- let inside do desugars to >> let ... in ... << outside do
         -- (x, y) desugars to (,) x y
         (x `return`)
         -- infix with `backticks` desugars to prefix
